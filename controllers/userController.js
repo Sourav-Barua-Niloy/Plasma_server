@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import jwt from "jsonwebtoken";
 import { registerSchema } from "../validators/userValidator.js";
 
 // Controller: handle new user registration (with Zod validation)
@@ -26,10 +27,11 @@ export const registerUser = async (req, res) => {
     }
 
     // 4. Create and save the new user to MongoDB
+    //    (the password is hashed automatically by the pre-save hook in the model)
     const newUser = await User.create({
       name,
       email,
-      password, // NOTE: plain text for now — we'll hash it in the auth phase!
+      password,
       bloodGroup,
       district,
       phone,
@@ -48,6 +50,55 @@ export const registerUser = async (req, res) => {
     });
   } catch (error) {
     // If anything goes wrong, send a server error
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Controller: log a user in
+export const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // 1. Basic check
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ message: "Email and password are required" });
+    }
+
+    // 2. Find the user by email (password is included by default)
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // 3. Compare the given password with the stored hash
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // 4. Create a JWT token containing the user's id and role
+    const token = jwt.sign(
+      { id: user._id, role: user.role }, // payload
+      process.env.JWT_SECRET, // secret key
+      { expiresIn: "7d" } // token valid for 7 days
+    );
+
+    // 5. Send back the token and basic user info (NEVER the password)
+    res.status(200).json({
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        bloodGroup: user.bloodGroup,
+        district: user.district,
+      },
+    });
+  } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
