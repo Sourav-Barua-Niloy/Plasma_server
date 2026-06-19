@@ -1,15 +1,23 @@
 import User from "../models/User.js";
+import { registerSchema } from "../validators/userValidator.js";
 
-// Controller: handle new user registration
+// Controller: handle new user registration (with Zod validation)
 export const registerUser = async (req, res) => {
   try {
-    // 1. Get the data the frontend sent (from the request body)
-    const { name, email, password, bloodGroup, district, phone } = req.body;
+    // 1. Validate incoming data against our Zod schema
+    const result = registerSchema.safeParse(req.body);
 
-    // 2. Basic check: are the required fields present?
-    if (!name || !email || !password || !bloodGroup || !district || !phone) {
-      return res.status(400).json({ message: "All fields are required" });
+    if (!result.success) {
+      // Validation failed — collect all the error messages
+      const errors = result.error.issues.map((issue) => issue.message);
+      return res.status(400).json({
+        message: "Validation failed",
+        errors, // an array of human-readable messages
+      });
     }
+
+    // 2. Use the validated, cleaned data (trimmed, correct types)
+    const { name, email, password, bloodGroup, district, phone } = result.data;
 
     // 3. Check if a user with this email already exists
     const existingUser = await User.findOne({ email });
