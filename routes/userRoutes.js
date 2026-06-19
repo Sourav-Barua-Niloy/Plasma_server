@@ -3,12 +3,16 @@ import {
   registerUser,
   getAllUsers,
   getUserById,
+  updateUser,
+  deleteUser,
 } from "../controllers/userController.js";
 
 const router = express.Router();
 
 router.post("/register", registerUser);
-router.get("/", getAllUsers);       // GET /api/users
-router.get("/:id", getUserById);    // GET /api/users/:id
+router.get("/", getAllUsers);
+router.get("/:id", getUserById);
+router.put("/:id", updateUser);       // PUT /api/users/:id
+router.delete("/:id", deleteUser);    // DELETE /api/users/:id
 
 export default router;

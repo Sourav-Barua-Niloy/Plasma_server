@@ -84,3 +84,50 @@ export const getUserById = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+// Controller: update a user by ID
+export const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Fields we ALLOW to be updated (we don't let just anything change)
+    const { name, district, phone, bloodGroup, isAvailable } = req.body;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { name, district, phone, bloodGroup, isAvailable },
+      {
+        new: true,           // return the UPDATED document, not the old one
+        runValidators: true, // re-check schema rules (e.g. valid bloodGroup)
+      }
+    ).select("-password");
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "User updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Controller: delete a user by ID
+export const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deletedUser = await User.findByIdAndDelete(id);
+
+    if (!deletedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
