@@ -1,9 +1,14 @@
 import express from "express";
-import { registerUser } from "../controllers/userController.js";
+import {
+  registerUser,
+  getAllUsers,
+  getUserById,
+} from "../controllers/userController.js";
 
 const router = express.Router();
 
-// POST /api/users/register → runs the registerUser controller
 router.post("/register", registerUser);
+router.get("/", getAllUsers);       // GET /api/users
+router.get("/:id", getUserById);    // GET /api/users/:id
 
 export default router;

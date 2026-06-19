@@ -43,3 +43,44 @@ export const registerUser = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+// Controller: get all users (with optional filtering by bloodGroup & district)
+export const getAllUsers = async (req, res) => {
+  try {
+    // Read optional filters from the query string (?bloodGroup=O+&district=Dhaka)
+    const { bloodGroup, district } = req.query;
+
+    // Build a filter object — only add fields that were actually provided
+    const filter = {};
+    if (bloodGroup) filter.bloodGroup = bloodGroup;
+    if (district) filter.district = district;
+
+    // Find users matching the filter; exclude the password field for security
+    const users = await User.find(filter).select("-password");
+
+    res.status(200).json({
+      count: users.length,
+      users,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Controller: get a single user by their ID
+export const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params; // grab the :id from the URL
+
+    const user = await User.findById(id).select("-password");
+
+    // If no user with that ID exists, say so
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ user });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
