@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import { registerSchema } from "../validators/userValidator.js";
 
 // Controller: handle new user registration (with Zod validation)
@@ -131,6 +132,11 @@ export const getUserById = async (req, res) => {
   try {
     const { id } = req.params; // grab the :id from the URL
 
+    // Validate the ID format BEFORE querying (avoids ugly 500 cast errors)
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
     const user = await User.findById(id).select("-password");
 
     // If no user with that ID exists, say so
@@ -148,6 +154,11 @@ export const getUserById = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Validate the ID format first
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
 
     // Fields we ALLOW to be updated (we don't let just anything change)
     const { name, district, phone, bloodGroup, isAvailable } = req.body;
@@ -178,6 +189,11 @@ export const updateUser = async (req, res) => {
 export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Validate the ID format first
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
 
     const deletedUser = await User.findByIdAndDelete(id);
 
