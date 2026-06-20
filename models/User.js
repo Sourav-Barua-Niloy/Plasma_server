@@ -7,24 +7,24 @@ const userSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
-      trim: true, // removes accidental spaces at start/end
+      trim: true,
     },
     email: {
       type: String,
       required: true,
-      unique: true, // no two users can share an email
-      lowercase: true, // always store emails in lowercase
+      unique: true,
+      lowercase: true,
       trim: true,
     },
     password: {
       type: String,
       required: true,
-      minlength: 6, // basic length rule
+      minlength: 6,
     },
     bloodGroup: {
       type: String,
       required: true,
-      enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"], // only these allowed
+      enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
     },
     district: {
       type: String,
@@ -39,26 +39,27 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: ["user", "admin"],
-      default: "user", // new users are regular users by default
+      default: "user",
     },
     isAvailable: {
       type: Boolean,
-      default: true, // donors are available by default
+      default: true,
+    },
+    lastDonationDate: {
+      type: Date,
+      default: null, // null = hasn't recorded a donation yet
     },
   },
   {
-    timestamps: true, // auto-adds createdAt and updatedAt fields
+    timestamps: true,
   }
 );
 
 // Pre-save hook: hash the password automatically before saving
 userSchema.pre("save", async function () {
-  // Only hash if the password was changed (or is new)
   if (!this.isModified("password")) {
     return;
   }
-
-  // Generate a salt and hash the password
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });
@@ -68,7 +69,6 @@ userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-// The model = the tool we use to work with users in the database
 const User = mongoose.model("User", userSchema);
 
 export default User;

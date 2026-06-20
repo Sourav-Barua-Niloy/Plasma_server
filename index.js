@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import userRoutes from "./routes/userRoutes.js";
+import requestRoutes from "./routes/requestRoutes.js";
 
 dotenv.config();
 connectDB();
@@ -23,8 +24,9 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "Plasma server is running!" });
 });
 
-// User routes
+// Routes
 app.use("/api/users", userRoutes);
+app.use("/api/requests", requestRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

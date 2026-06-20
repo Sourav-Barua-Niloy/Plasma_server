@@ -97,6 +97,8 @@ export const loginUser = async (req, res) => {
         role: user.role,
         bloodGroup: user.bloodGroup,
         district: user.district,
+        isAvailable: user.isAvailable,
+        lastDonationDate: user.lastDonationDate,
       },
     });
   } catch (error) {
@@ -161,11 +163,12 @@ export const updateUser = async (req, res) => {
     }
 
     // Fields we ALLOW to be updated (we don't let just anything change)
-    const { name, district, phone, bloodGroup, isAvailable } = req.body;
+    const { name, district, phone, bloodGroup, isAvailable, lastDonationDate } =
+      req.body;
 
     const updatedUser = await User.findByIdAndUpdate(
       id,
-      { name, district, phone, bloodGroup, isAvailable },
+      { name, district, phone, bloodGroup, isAvailable, lastDonationDate },
       {
         new: true,           // return the UPDATED document, not the old one
         runValidators: true, // re-check schema rules (e.g. valid bloodGroup)
