@@ -2,6 +2,7 @@ import express from "express";
 import {
   getAllUsers,
   deleteUser,
+  adminUpdateUser,
   getAdminStats,
 } from "../controllers/userController.js";
 import {
@@ -17,6 +18,7 @@ router.use(protect, adminOnly);
 
 router.get("/stats", getAdminStats);
 router.get("/users", getAllUsers);
+router.put("/users/:id", adminUpdateUser);
 router.delete("/users/:id", deleteUser);
 router.get("/requests", getAllRequests);
 router.delete("/requests/:id", adminDeleteRequest);

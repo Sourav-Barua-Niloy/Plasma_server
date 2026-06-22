@@ -2,6 +2,7 @@ import express from "express";
 import {
   createRequest,
   getAllRequests,
+  getMyRequests,
   getRequestById,
   updateRequest,
   deleteRequest,
@@ -12,6 +13,12 @@ const router = express.Router();
 
 // Public — anyone can browse requests
 router.get("/", getAllRequests);
+
+// Protected — the logged-in user's own requests
+// ⚠️ MUST come before "/:id" or "mine" would be treated as an :id
+router.get("/mine", protect, getMyRequests);
+
+// Public — single request by ID
 router.get("/:id", getRequestById);
 
 // Protected — must be logged in to create, edit, or delete

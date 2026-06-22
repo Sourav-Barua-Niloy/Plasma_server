@@ -6,6 +6,7 @@ import {
   getUserById,
   updateUser,
   deleteUser,
+  deleteMyAccount,
   changePassword,
 } from "../controllers/userController.js";
 import { protect } from "../middleware/authMiddleware.js";
@@ -19,8 +20,9 @@ router.get("/", getAllUsers);
 
 // Protected — specific routes BEFORE the dynamic /:id route
 router.put("/change-password", protect, changePassword);
+router.delete("/me", protect, deleteMyAccount);
 
-// Dynamic ID routes (must come after specific paths like /change-password)
+// Dynamic ID routes (must come after specific paths)
 router.get("/:id", getUserById);
 router.put("/:id", protect, updateUser);
 router.delete("/:id", protect, deleteUser);

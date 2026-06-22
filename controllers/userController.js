@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import BloodRequest from "../models/BloodRequest.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import { registerSchema } from "../validators/userValidator.js";
@@ -259,7 +260,7 @@ export const changePassword = async (req, res) => {
   }
 };
 
-// Controller: delete a user by ID
+// Controller: delete a user by ID (admin use)
 export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
@@ -275,6 +276,75 @@ export const deleteUser = async (req, res) => {
     }
 
     res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Controller: delete the logged-in user's OWN account (+ their requests)
+export const deleteMyAccount = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    // Cascade: remove this user's blood requests first (no orphans)
+    await BloodRequest.deleteMany({ requestedBy: userId });
+
+    // Then delete the user
+    const deleted = await User.findByIdAndDelete(userId);
+    if (!deleted) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ message: "Your account has been deleted." });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// ADMIN: update any user (name, phone, bloodGroup, availability, role)
+export const adminUpdateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
+    const { name, phone, bloodGroup, isAvailable, role } = req.body;
+
+    // Build the update object from provided fields only
+    const update = {};
+    if (name !== undefined) update.name = name;
+    if (phone !== undefined) update.phone = phone;
+    if (bloodGroup !== undefined) update.bloodGroup = bloodGroup;
+    if (isAvailable !== undefined) update.isAvailable = isAvailable;
+
+    // Role change — with safeguard: an admin can't change their OWN role here
+    if (role !== undefined) {
+      if (id === req.user._id.toString()) {
+        return res
+          .status(400)
+          .json({ message: "You cannot change your own role." });
+      }
+      if (!["user", "admin"].includes(role)) {
+        return res.status(400).json({ message: "Invalid role." });
+      }
+      update.role = role;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(id, update, {
+      new: true,
+      runValidators: true,
+    }).select("-password");
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "User updated successfully",
+      user: updatedUser,
+    });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }

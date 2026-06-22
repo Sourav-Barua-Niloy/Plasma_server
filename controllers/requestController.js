@@ -50,6 +50,21 @@ export const getAllRequests = async (req, res) => {
   }
 };
 
+// Get the logged-in user's own requests (any status)
+export const getMyRequests = async (req, res) => {
+  try {
+    const requests = await BloodRequest.find({ requestedBy: req.user._id })
+      .populate("division", "name")
+      .populate("district", "name")
+      .populate("upazila", "name")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ count: requests.length, requests });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 // Get a single request by ID
 export const getRequestById = async (req, res) => {
   try {
