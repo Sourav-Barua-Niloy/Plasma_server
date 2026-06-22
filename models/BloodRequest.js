@@ -23,11 +23,33 @@ const bloodRequestSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    district: {
+
+    // OLD string location — kept temporarily for migration (optional now)
+    districtName: {
       type: String,
-      required: true,
       trim: true,
     },
+
+    // NEW reference-based location
+    division: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Division",
+    },
+    district: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "District",
+    },
+    upazila: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Upazila",
+    },
+
+    // Free-text area detail
+    area: {
+      type: String,
+      trim: true,
+    },
+
     contactPhone: {
       type: String,
       required: true,

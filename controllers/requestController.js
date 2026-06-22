@@ -12,6 +12,7 @@ export const createRequest = async (req, res) => {
       return res.status(400).json({ message: "Validation failed", errors });
     }
 
+    // result.data now includes division/district/upazila/area
     const newRequest = await BloodRequest.create({
       ...result.data,
       requestedBy: req.user._id,
@@ -33,11 +34,14 @@ export const getAllRequests = async (req, res) => {
 
     const filter = {};
     if (bloodGroup) filter.bloodGroup = bloodGroup;
-    if (district) filter.district = district;
+    if (district) filter.district = district; // district ID now
     if (status) filter.status = status;
 
     const requests = await BloodRequest.find(filter)
       .populate("requestedBy", "name email")
+      .populate("division", "name")
+      .populate("district", "name")
+      .populate("upazila", "name")
       .sort({ createdAt: -1 });
 
     res.status(200).json({ count: requests.length, requests });
@@ -55,10 +59,11 @@ export const getRequestById = async (req, res) => {
       return res.status(400).json({ message: "Invalid request ID" });
     }
 
-    const request = await BloodRequest.findById(id).populate(
-      "requestedBy",
-      "name email"
-    );
+    const request = await BloodRequest.findById(id)
+      .populate("requestedBy", "name email")
+      .populate("division", "name")
+      .populate("district", "name")
+      .populate("upazila", "name");
 
     if (!request) {
       return res.status(404).json({ message: "Request not found" });
