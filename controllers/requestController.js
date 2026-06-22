@@ -151,6 +151,58 @@ export const deleteRequest = async (req, res) => {
   }
 };
 
+// ADMIN: update any request (moderation — bypasses ownership check)
+export const adminUpdateRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid request ID" });
+    }
+
+    const {
+      patientName,
+      bloodGroup,
+      unitsNeeded,
+      hospital,
+      contactPhone,
+      urgency,
+      note,
+      status,
+    } = req.body;
+
+    // Build update from provided fields only
+    const update = {};
+    if (patientName !== undefined) update.patientName = patientName;
+    if (bloodGroup !== undefined) update.bloodGroup = bloodGroup;
+    if (unitsNeeded !== undefined) update.unitsNeeded = unitsNeeded;
+    if (hospital !== undefined) update.hospital = hospital;
+    if (contactPhone !== undefined) update.contactPhone = contactPhone;
+    if (urgency !== undefined) update.urgency = urgency;
+    if (note !== undefined) update.note = note;
+    if (status !== undefined) update.status = status;
+
+    const updated = await BloodRequest.findByIdAndUpdate(id, update, {
+      new: true,
+      runValidators: true,
+    })
+      .populate("requestedBy", "name email")
+      .populate("division", "name")
+      .populate("district", "name")
+      .populate("upazila", "name");
+
+    if (!updated) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    res
+      .status(200)
+      .json({ message: "Request updated by admin", request: updated });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 // ADMIN: delete any request (moderation — bypasses ownership check)
 export const adminDeleteRequest = async (req, res) => {
   try {

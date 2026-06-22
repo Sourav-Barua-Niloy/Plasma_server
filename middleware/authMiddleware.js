@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import { isSuperadmin } from "../config/roles.js";
 
 // Middleware: verify the JWT and attach the user to the request
 export const protect = async (req, res, next) => {
@@ -34,11 +35,25 @@ export const protect = async (req, res, next) => {
   }
 };
 
-// Middleware: allow only admins (used AFTER protect)
+// Middleware: allow admins AND superadmin (used AFTER protect)
 export const adminOnly = (req, res, next) => {
-  if (req.user && req.user.role === "admin") {
+  if (
+    req.user &&
+    (req.user.role === "admin" || req.user.role === "superadmin")
+  ) {
     next();
   } else {
     return res.status(403).json({ message: "Access denied, admins only" });
+  }
+};
+
+// Middleware: allow ONLY the superadmin (used AFTER protect)
+export const superadminOnly = (req, res, next) => {
+  if (req.user && isSuperadmin(req.user)) {
+    next();
+  } else {
+    return res
+      .status(403)
+      .json({ message: "Access denied, superadmin only" });
   }
 };

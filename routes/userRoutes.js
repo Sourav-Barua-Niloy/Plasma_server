@@ -16,7 +16,7 @@ const router = express.Router();
 // Public routes
 router.post("/register", registerUser);
 router.post("/login", loginUser);
-router.get("/", getAllUsers);
+router.get("/", protect, getAllUsers);
 
 // Protected — specific routes BEFORE the dynamic /:id route
 router.put("/change-password", protect, changePassword);

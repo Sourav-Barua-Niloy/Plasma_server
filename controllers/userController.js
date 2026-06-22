@@ -3,6 +3,11 @@ import BloodRequest from "../models/BloodRequest.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import { registerSchema } from "../validators/userValidator.js";
+import {
+  isSuperadmin,
+  isSuperadminEmail,
+  isAdminRole,
+} from "../config/roles.js";
 
 // Controller: handle new user registration (with Zod validation)
 export const registerUser = async (req, res) => {
@@ -119,12 +124,13 @@ export const loginUser = async (req, res) => {
   }
 };
 
-// Controller: get all users (with optional filtering by bloodGroup & district)
+// Controller: get all DONORS (role: user) with optional filtering
 export const getAllUsers = async (req, res) => {
   try {
     const { bloodGroup, district } = req.query;
 
-    const filter = {};
+    // Only actual donors — exclude admins/superadmins
+    const filter = { role: "user" };
     if (bloodGroup) filter.bloodGroup = bloodGroup;
     if (district) filter.district = district;
 
@@ -260,7 +266,7 @@ export const changePassword = async (req, res) => {
   }
 };
 
-// Controller: delete a user by ID (admin use)
+// Controller: delete a user by ID (admin use — hierarchy enforced)
 export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
@@ -269,12 +275,28 @@ export const deleteUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid user ID" });
     }
 
-    const deletedUser = await User.findByIdAndDelete(id);
-
-    if (!deletedUser) {
+    const target = await User.findById(id);
+    if (!target) {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const actorIsSuper = isSuperadmin(req.user);
+
+    // RULE 1: The superadmin can never be deleted
+    if (isSuperadminEmail(target.email)) {
+      return res
+        .status(403)
+        .json({ message: "The main admin account cannot be deleted." });
+    }
+
+    // RULE 3: Sub-admins can't delete other admins — only the superadmin can
+    if (!actorIsSuper && isAdminRole(target.role)) {
+      return res
+        .status(403)
+        .json({ message: "Only the main admin can delete admin accounts." });
+    }
+
+    await User.findByIdAndDelete(id);
     res.status(200).json({ message: "User deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
@@ -310,22 +332,44 @@ export const adminUpdateUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid user ID" });
     }
 
+    // Load the target user we're trying to modify
+    const target = await User.findById(id);
+    if (!target) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const actorIsSuper = isSuperadmin(req.user);
+
+    // RULE 1: The superadmin is untouchable — no one may edit them
+    if (isSuperadminEmail(target.email)) {
+      return res
+        .status(403)
+        .json({ message: "The main admin account cannot be modified." });
+    }
+
+    // RULE 3: Sub-admins can only manage regular users, not other admins
+    if (!actorIsSuper && isAdminRole(target.role)) {
+      return res
+        .status(403)
+        .json({ message: "Only the main admin can manage admin accounts." });
+    }
+
     const { name, phone, bloodGroup, isAvailable, role } = req.body;
 
-    // Build the update object from provided fields only
     const update = {};
     if (name !== undefined) update.name = name;
     if (phone !== undefined) update.phone = phone;
     if (bloodGroup !== undefined) update.bloodGroup = bloodGroup;
     if (isAvailable !== undefined) update.isAvailable = isAvailable;
 
-    // Role change — with safeguard: an admin can't change their OWN role here
+    // RULE 2: Only the superadmin may change roles
     if (role !== undefined) {
-      if (id === req.user._id.toString()) {
+      if (!actorIsSuper) {
         return res
-          .status(400)
-          .json({ message: "You cannot change your own role." });
+          .status(403)
+          .json({ message: "Only the main admin can change roles." });
       }
+      // Can't assign the superadmin role to anyone via this endpoint
       if (!["user", "admin"].includes(role)) {
         return res.status(400).json({ message: "Invalid role." });
       }
@@ -336,10 +380,6 @@ export const adminUpdateUser = async (req, res) => {
       new: true,
       runValidators: true,
     }).select("-password");
-
-    if (!updatedUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
 
     res.status(200).json({
       message: "User updated successfully",
@@ -353,9 +393,14 @@ export const adminUpdateUser = async (req, res) => {
 // ADMIN: get platform stats (counts)
 export const getAdminStats = async (req, res) => {
   try {
-    const totalUsers = await User.countDocuments();
-    const availableDonors = await User.countDocuments({ isAvailable: true });
-    const admins = await User.countDocuments({ role: "admin" });
+    const totalUsers = await User.countDocuments({ role: "user" });
+    const availableDonors = await User.countDocuments({
+      role: "user",
+      isAvailable: true,
+    });
+    const admins = await User.countDocuments({
+      role: { $in: ["admin", "superadmin"] },
+    });
 
     res.status(200).json({
       stats: { totalUsers, availableDonors, admins },
