@@ -1,22 +1,7 @@
 import { z } from "zod";
 
-// Valid options (must match your Mongoose model)
+// Valid blood groups (must match your Mongoose model)
 const bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
-
-const districts = [
-  "Bagerhat", "Bandarban", "Barguna", "Barishal", "Bhola", "Bogura",
-  "Brahmanbaria", "Chandpur", "Chattogram", "Chuadanga", "Cox's Bazar",
-  "Cumilla", "Dhaka", "Dinajpur", "Faridpur", "Feni", "Gaibandha",
-  "Gazipur", "Gopalganj", "Habiganj", "Jamalpur", "Jashore", "Jhalokati",
-  "Jhenaidah", "Joypurhat", "Khagrachhari", "Khulna", "Kishoreganj",
-  "Kurigram", "Kushtia", "Lakshmipur", "Lalmonirhat", "Madaripur",
-  "Magura", "Manikganj", "Meherpur", "Moulvibazar", "Munshiganj",
-  "Mymensingh", "Naogaon", "Narail", "Narayanganj", "Narsingdi",
-  "Natore", "Netrokona", "Nilphamari", "Noakhali", "Pabna",
-  "Panchagarh", "Patuakhali", "Pirojpur", "Rajbari", "Rajshahi",
-  "Rangamati", "Rangpur", "Satkhira", "Shariatpur", "Sherpur",
-  "Sirajganj", "Sunamganj", "Sylhet", "Tangail", "Thakurgaon",
-];
 
 // The schema: every rule for a valid registration
 export const registerSchema = z.object({
@@ -37,9 +22,19 @@ export const registerSchema = z.object({
     error: "Please select a valid blood group",
   }),
 
-  district: z.enum(districts, {
-    error: "Please select a valid district",
-  }),
+  // Reference-based location — each must be a valid MongoDB ObjectId (24 hex chars)
+  division: z
+    .string()
+    .regex(/^[0-9a-fA-F]{24}$/, "Please select a valid division"),
+  district: z
+    .string()
+    .regex(/^[0-9a-fA-F]{24}$/, "Please select a valid district"),
+  upazila: z
+    .string()
+    .regex(/^[0-9a-fA-F]{24}$/, "Please select a valid upazila"),
+
+  // Free-text area detail — optional
+  area: z.string().trim().max(150, "Area is too long").optional(),
 
   phone: z
     .string()

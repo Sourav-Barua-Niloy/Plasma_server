@@ -26,11 +26,33 @@ const userSchema = new mongoose.Schema(
       required: true,
       enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
     },
-    district: {
+
+    // OLD string location — kept temporarily for migration (optional now)
+    districtName: {
       type: String,
-      required: true,
       trim: true,
     },
+
+    // NEW reference-based location (optional for now → required after migration)
+    division: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Division",
+    },
+    district: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "District",
+    },
+    upazila: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Upazila",
+    },
+
+    // Free-text area detail (village / mahalla / ward / street address)
+    area: {
+      type: String,
+      trim: true,
+    },
+
     phone: {
       type: String,
       required: true,
@@ -39,7 +61,7 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: ["user", "admin"],
-      default: "user",
+      default: "user", // new users are regular users by default
     },
     isAvailable: {
       type: Boolean,

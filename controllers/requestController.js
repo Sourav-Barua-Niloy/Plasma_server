@@ -12,7 +12,6 @@ export const createRequest = async (req, res) => {
       return res.status(400).json({ message: "Validation failed", errors });
     }
 
-    // requestedBy comes from the logged-in user (set by the protect middleware)
     const newRequest = await BloodRequest.create({
       ...result.data,
       requestedBy: req.user._id,
@@ -37,10 +36,9 @@ export const getAllRequests = async (req, res) => {
     if (district) filter.district = district;
     if (status) filter.status = status;
 
-    // .populate() pulls in the requester's name & email from the User collection
     const requests = await BloodRequest.find(filter)
       .populate("requestedBy", "name email")
-      .sort({ createdAt: -1 }); // newest first
+      .sort({ createdAt: -1 });
 
     res.status(200).json({ count: requests.length, requests });
   } catch (error) {
@@ -86,9 +84,10 @@ export const updateRequest = async (req, res) => {
       return res.status(404).json({ message: "Request not found" });
     }
 
-    // Ownership check: only the user who created it can edit it
     if (request.requestedBy.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Not authorized to edit this request" });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to edit this request" });
     }
 
     const { status, urgency, note, unitsNeeded } = req.body;
@@ -120,11 +119,33 @@ export const deleteRequest = async (req, res) => {
     }
 
     if (request.requestedBy.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Not authorized to delete this request" });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to delete this request" });
     }
 
     await request.deleteOne();
     res.status(200).json({ message: "Request deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// ADMIN: delete any request (moderation — bypasses ownership check)
+export const adminDeleteRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid request ID" });
+    }
+
+    const deleted = await BloodRequest.findByIdAndDelete(id);
+    if (!deleted) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    res.status(200).json({ message: "Request deleted by admin" });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
